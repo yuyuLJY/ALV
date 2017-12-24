@@ -1,0 +1,275 @@
+#include <stdio.h>
+#include <stdlib.h>
+/* AVL树结构体 */
+typedef int ElementType;
+struct AVLNode{
+    ElementType Data; //结点数据
+    struct AVLNode *Left;     //指向左子树
+    struct AVLNode *Right;    //指向右子树
+    int Height;       //树高
+};
+typedef struct AVLNode *AVLTree;
+AVLTree SingleLeftRotation ( AVLTree A );
+AVLTree SingleRightRotation ( AVLTree A );
+AVLTree DoubleLeftRightRotation ( AVLTree A );
+AVLTree DoubleRightLeftRotation ( AVLTree A );
+int Max ( int a, int b );
+AVLTree Insert( AVLTree T, ElementType X );
+AVLTree In_Search(AVLTree T,int x);
+int GetHeight(AVLTree T);
+void preOrderTraversal(AVLTree BT);
+void MiddleOrderTraversal(AVLTree BT);
+void posOrderTraversal(AVLTree BT);
+AVLTree reafromfile(AVLTree T,int *m);
+AVLTree deleteNode(AVLTree T,AVLTree z);
+AVLTree avltree_maximum(AVLTree tree);
+int main()
+{
+    AVLTree T=NULL;
+    int m;
+    printf("|--------------AVL构建过程-------------|\n");
+    T=reafromfile(T,&m);//在插入操作中，创建AVL树完毕
+    printf("|----------------显示结果--------------|\n");
+    printf("从小到大排序结果：");
+    MiddleOrderTraversal(T);
+    printf("\n");
+    printf("后续遍历结果：");
+    posOrderTraversal(T);
+    printf("\n");
+    printf("要查找的元素16\n");
+    int x=16;
+    AVLTree W= In_Search(T,x);//非递归查找
+    printf("验证正确性，打印该节点的左右结点信息 %d \n",W->Data);
+    printf("删除节点y后打印结果：\n");
+    AVLTree y;
+    y=(AVLTree)malloc(sizeof(struct AVLNode));
+    y->Data=16;
+    AVLTree DTree=deleteNode(T,y);//删除后形成的树
+    preOrderTraversal(DTree);
+    return 0;
+}
+
+/*从文件中读进信息*/
+AVLTree reafromfile(AVLTree T,int *m){
+    FILE*fp;
+    int i,data_;
+    if((fp=fopen("E://数据结构//AVL//data.txt","r"))==NULL)
+    {
+        printf("fail to open!");
+        exit(0);
+    }
+    fscanf(fp,"%d\n",m);
+    printf("%d\n",*m);
+    for(i=1;i<=*m;i++)
+    {
+        fscanf(fp,"%d",&data_);
+        //printf("%d ",data_);
+        T=Insert(T,data_);
+        printf("中序遍历：");
+        MiddleOrderTraversal(T);
+        printf("\n");
+        //printf("\n");
+    }
+    return T;
+}
+
+int Max ( int a, int b )
+{
+    return a > b ? a : b;
+}
+
+int GetHeight(AVLTree T){
+    return  (T==NULL ? -1 : T->Height);
+}
+
+AVLTree SingleLeftRotation ( AVLTree A )
+{
+    AVLTree B = A->Left;
+    A->Left = B->Right;
+    B->Right = A;
+    A->Height = Max( GetHeight(A->Left), GetHeight(A->Right) ) + 1;
+    B->Height = Max( GetHeight(B->Left), A->Height ) + 1;
+    return B;
+}
+
+AVLTree SingleRightRotation ( AVLTree A )
+{
+    AVLTree B = A->Right;
+    A->Right = B->Left;
+    B->Left = A;
+    A->Height = Max( GetHeight(A->Left), GetHeight(A->Right) ) + 1;
+    //因为已经求出了A->Height，所以B不需要跟A一样再调多用一次 GetHeight
+    B->Height = Max( GetHeight(B->Left), A->Height ) + 1;
+    return B;
+}
+
+AVLTree DoubleLeftRightRotation ( AVLTree A )
+{
+    A->Left = SingleRightRotation(A->Left);
+    //将A与C做左单旋，C被返回
+    return SingleLeftRotation(A);
+}
+
+AVLTree DoubleRightLeftRotation ( AVLTree A )
+{
+    A->Right = SingleLeftRotation(A->Right);
+    return SingleRightRotation(A);
+}
+
+AVLTree Insert( AVLTree T, ElementType X )
+{ /* 将X插入AVL树T中，并且返回调整后的AVL树 */
+    if ( !T ) { /* 若插入空树，则新建包含一个结点的树 */
+        T = (AVLTree)malloc(sizeof(struct AVLNode));
+        T->Data = X;
+        T->Height = 0;
+        T->Left = T->Right = NULL;
+    }
+    else if ( X < T->Data ) {//插入T的左子树
+        T->Left = Insert( T->Left, X);
+        if ( GetHeight(T->Left)-GetHeight(T->Right) == 2 ){
+            if ( X < T->Left->Data ){
+                 T = SingleLeftRotation(T);      /* 左单旋 */
+                 printf("调用左单旋\n");
+            }
+
+            else{
+                 T = DoubleLeftRightRotation(T); /* 左-右双旋 */
+                 printf("调用左-右双旋\n");
+            }
+
+        }
+    }
+    else{
+        T->Right = Insert( T->Right, X );
+        if ( GetHeight(T->Left)-GetHeight(T->Right) == -2 ){
+            if ( X > T->Right->Data ){
+                 T = SingleRightRotation(T);
+                 printf("调用右单旋\n");
+            }
+            else{
+                 T = DoubleRightLeftRotation(T);
+                 printf("调用右-左双旋\n");
+            }
+        }
+
+    }
+    T->Height = Max( GetHeight(T->Left), GetHeight(T->Right) ) + 1;
+    return T;
+}
+
+/*非递归查找值为x的结点，并且返回结点信息*/
+AVLTree In_Search(AVLTree T,int x){
+    while(T->Data!=x && T!=NULL){
+        if(x<T->Data)
+            T=T->Left;
+        else
+            T=T->Right;
+    }
+    if(T==NULL){
+        printf("找不到\n");
+        return NULL;
+    }
+    else
+        return T;
+}
+
+//先序遍历
+void preOrderTraversal(AVLTree BT){
+    if(BT){
+        //printf("%d ",BT->data);
+        printf("%d ",BT->Data);
+        preOrderTraversal(BT->Left);
+        preOrderTraversal(BT->Right);
+
+    }
+}
+
+//中序遍历
+void MiddleOrderTraversal(AVLTree BT){
+    if(BT){
+        MiddleOrderTraversal(BT->Left);
+        printf("%d ",BT->Data);
+        MiddleOrderTraversal(BT->Right);
+
+    }
+}
+
+//后序遍历
+void posOrderTraversal(AVLTree BT){
+    if(BT){
+        posOrderTraversal(BT->Left);
+        posOrderTraversal(BT->Right);
+        printf("%d ",BT->Data);
+
+    }
+}
+
+
+/*作用：删除指定的一个顶点
+返回：返回完成删除操作的新的树*/
+AVLTree deleteNode(AVLTree tree, AVLTree z)
+ {
+     // 根为空 或者 没有要删除的节点，直接返回NULL。
+     if (tree==NULL || z==NULL)
+         return NULL;
+     if (z->Data < tree->Data)
+     {
+         tree->Left = deleteNode(tree->Left, z);
+         // 删除节点后，若AVL树失去平衡，则进行相应的调节。
+         if (GetHeight(tree->Right) - GetHeight(tree->Left) == 2)
+       {
+            AVLTree r =  tree->Right;
+            if (GetHeight(r->Left) > GetHeight(r->Right))
+                 tree = DoubleRightLeftRotation (tree);
+            else  //右边是直线
+               tree =SingleRightRotation (tree);
+        }
+     }
+     else if (z->Data > tree->Data)// 待删除的节点在"tree的右子树"中
+     {
+       tree->Right = deleteNode(tree->Right, z);
+        // 删除节点后，若AVL树失去平衡，则进行相应的调节。
+        if (GetHeight(tree->Left) - GetHeight(tree->Right) == 2)
+         {
+              AVLTree l =  tree->Left;
+             if (GetHeight(l->Right) > GetHeight(l->Left))
+                tree = DoubleLeftRightRotation(tree);
+          else
+                 tree = SingleLeftRotation(tree);
+         }
+     }
+     else    // tree是对应要删除
+     {
+         if ((tree->Left) && (tree->Right))//左右儿子不空
+         {
+             if (GetHeight(tree->Left) > GetHeight(tree->Right))
+             {
+                 AVLTree max = avltree_maximum(tree->Left);
+                 tree->Data = max->Data;
+                 tree->Left = deleteNode(tree->Left, max);
+             }else{
+                 AVLTree min = avltree_maximum(tree->Right);
+                 tree->Data = min->Data;
+                 tree->Right = deleteNode(tree->Right, min);
+             }
+         }else//不是两个儿子的情况
+         {
+             AVLTree tmp = tree;
+             tree = tree->Left ? tree->Left : tree->Right;
+             free(tmp);
+         }
+    }
+     return tree;
+ }
+
+ /*
+查找最大结点：返回tree为根结点的AVL树的最大结点。
+*/
+AVLTree avltree_maximum(AVLTree tree){
+     if (tree == NULL)
+         return NULL;
+
+     while(tree->Right != NULL)
+         tree = tree->Right;
+     return tree;
+}
